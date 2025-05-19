@@ -7,7 +7,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const db=require('./src/config/db');
+const db=require('./src/config/db/db');
 // Ejemplo de ruta inicial
 app.get('/', (req, res) => {
   res.send('API Amigos Peludos funcionando 🐶');
