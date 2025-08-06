@@ -1,19 +1,27 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
+const logger = require('./src/middleware/loggerMiddleware.js');
+const errorHandler = require('./src/middleware/errorMiddlewareHandler.js');
+const productCategorieRoutes = require('./src/routes/productCategorieRoutes.js');
+const categoryProductsRoutes = require('./src/routes/categoryProductsRoutes');
+const userPaymentMethodRoutes = require('./src/routes/userPaymentMethodRoutes');
+const orderRoutes = require('./src/routes/orderRoutes');
 
 const app = express();
 
+// Middlewares globales
 app.use(cors());
 app.use(express.json());
+app.use(logger);
 
-const db=require('./src/config/db/db');
-// Ejemplo de ruta inicial
-app.get('/', (req, res) => {
-  res.send('API Amigos Peludos funcionando 🐶');
-});
+// Rutas
+const apiRoutes = require('./src/routes/api');
+app.use('/api', apiRoutes);
+app.use('/api/products', productCategorieRoutes);
+app.use('/api/categories', categoryProductsRoutes);
+app.use('/api/user-payment-methods', userPaymentMethodRoutes);
+app.use('/api/orders', orderRoutes);
+// 👉 Este SIEMPRE debe ir al final de todas las rutas
+app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
-});
+module.exports = app;
