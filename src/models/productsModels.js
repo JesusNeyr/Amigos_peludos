@@ -1,8 +1,14 @@
 const db = require('../config/db/db.js');
 
 const getAllProducts = async () => {
-  const [rows] = await db.query('SELECT * FROM products');
-  return rows;
+  try{
+    const [rows] = await db.query('SELECT * FROM products');
+    return rows;
+
+  }catch(err){
+    console.error('error en modul products',err)
+    throw err;
+  }
 };
 
 const getProductById = async (id) => {
