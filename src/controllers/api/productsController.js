@@ -6,6 +6,7 @@ const getAll = async (req, res) => {
     const products = await ProductService.findAllProducts();
     res.json(products);
   } catch (err) {
+    console.error('ERROR AL OBTENER PRODUCTOS:', err);
     res.status(500).json({ error: 'Error al obtener los productos' });
   }
 };
