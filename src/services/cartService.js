@@ -129,8 +129,9 @@ const checkout = async (userId, paymentMethodId = null) => {
 
     // Crear orden con método de pago si existe
     const [orderResult] = await connection.query(`
-      INSERT INTO orders (user_id, total_price, payment_method_id)
-      VALUES (?, ?, ?)
+      INSERT INTO orders (user_id, total_price, status, payment_method_id)
+VALUES (?, ?, ?, ?)
+
     `, [userId, total, paymentMethodId]);
     const orderId = orderResult.insertId;
 
