@@ -132,7 +132,7 @@ const checkout = async (userId, paymentMethodId = null) => {
       INSERT INTO orders (user_id, total_price, status, payment_method_id)
 VALUES (?, ?, ?, ?)
 
-    `, [userId, total, paymentMethodId]);
+    `, [userId, total,'pendiente', paymentMethodId]);
     const orderId = orderResult.insertId;
 
     // Crear order_items
