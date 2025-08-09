@@ -104,3 +104,16 @@ CREATE TABLE receipts (
     issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
+CREATE TABLE `user_payment_methods` (
+   `id` int NOT NULL AUTO_INCREMENT,
+   `user_id` int NOT NULL,
+   `payment_method_id` int NOT NULL,
+   `details` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
+   `is_default` tinyint(1) DEFAULT '0',
+   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   PRIMARY KEY (`id`),
+   KEY `user_id` (`user_id`),
+   KEY `payment_method_id` (`payment_method_id`),
+   CONSTRAINT `user_payment_methods_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+   CONSTRAINT `user_payment_methods_ibfk_2` FOREIGN KEY (`payment_method_id`) REFERENCES `payment_methods` (`id`)
+ ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
