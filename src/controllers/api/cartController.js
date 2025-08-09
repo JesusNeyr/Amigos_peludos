@@ -54,6 +54,8 @@ const checkout = async (req, res) => {
     const order = await CartService.checkout(userId, paymentMethodId);
      // Obtener email del usuario (puede ser de req.user o hacer consulta a BD si no está en token)
     const userEmail = req.user.email;
+    const { payment_method_id } = req.body;
+    console.log('payment_method_id recibido:', payment_method_id);
 
     // Enviar correo de confirmación
     await sendOrderConfirmation(userEmail, order);
