@@ -93,6 +93,103 @@ const removeCartItem = async (userId, productId) => {
   }
 };
 
+// const checkout = async (userId, paymentMethodId = null) => {
+//   const connection = await db.getConnection();
+//   try {
+//     await connection.beginTransaction();
+
+//     // Obtener cart_id
+//     const [cartRows] = await connection.query('SELECT id FROM carts WHERE user_id = ?', [userId]);
+//     if (cartRows.length === 0) throw new Error('No existe carrito para el usuario');
+//     const cartId = cartRows[0].id;
+
+//     // Obtener los ítems del carrito
+//     const [cartItems] = await connection.query(`
+//       SELECT ci.product_id, ci.quantity, p.price
+//       FROM cart_items ci
+//       JOIN products p ON ci.product_id = p.id
+//       WHERE ci.cart_id = ?
+//     `, [cartId]);
+//     if (cartItems.length === 0) throw new Error('El carrito está vacío');
+
+//     // Validar stock
+//     for (const item of cartItems) {
+//       const [productRows] = await connection.query('SELECT stock FROM products WHERE id = ?', [item.product_id]);
+//       if (productRows.length === 0) throw new Error(`Producto con id ${item.product_id} no encontrado`);
+//       const stock = productRows[0].stock;
+//       if (item.quantity > stock) {
+//         console.error(`Stock insuficiente para producto ${item.product_id}: Disponible ${stock}, solicitado ${item.quantity}`);
+//         throw new Error(`Stock insuficiente para el producto id ${item.product_id}. Disponible: ${stock}, solicitado: ${item.quantity}`);
+//       }
+
+//     }
+
+//     // Calcular total
+//     const total = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+//     // Crear orden con método de pago si existe
+//     const [orderResult] = await connection.query(`
+//       INSERT INTO orders (user_id, total_price, status, payment_method_id)
+// VALUES (?, ?, ?, ?)
+
+//     `, [userId, total,'pendiente', paymentMethodId]);
+//     const orderId = orderResult.insertId;
+
+//     // Crear order_items
+//     const orderItemsData = cartItems.map(item => [orderId, item.product_id, item.quantity, item.price]);
+//     await connection.query(`
+//       INSERT INTO order_items (order_id, product_id, quantity, price_at_sale)
+//       VALUES ?
+//     `, [orderItemsData]);
+
+//     // Actualizar stock
+//     for (const item of cartItems) {
+//       await connection.query('UPDATE products SET stock = stock - ? WHERE id = ?', [item.quantity, item.product_id]);
+//     }
+
+//     // Crear recibo
+//     const receiptNumber = 'REC-' + Date.now();
+//     await connection.query('INSERT INTO receipts (order_id, receipt_number) VALUES (?, ?)', [orderId, receiptNumber]);
+
+//     // Vaciar carrito
+//     await connection.query('DELETE FROM cart_items WHERE cart_id = ?', [cartId]);
+
+//     await connection.commit();
+
+//     // Obtener datos usuario para el mail
+//     const [userRows] = await connection.query('SELECT name, email FROM users WHERE id = ?', [userId]);
+//     const user = userRows[0];
+
+//     // Construir contenido del mail
+//     const emailContent = `
+//       <h1>Compra Confirmada</h1>
+//       <p>Hola ${user.name}, gracias por tu compra.</p>
+//       <p>Pedido #${orderId} - Total: $${total}</p>
+//       <p>Detalles:</p>
+//       <ul>
+//         ${cartItems.map(item => `<li>${item.quantity} x Producto ID ${item.product_id} - $${item.price}</li>`).join('')}
+//       </ul>
+//       <p>Número de recibo: ${receiptNumber}</p>
+//     `;
+
+//     // Enviar correo
+//     await emailService.sendOrderConfirmation(user.email, { orderId, total, items: cartItems, receiptNumber });
+
+
+//     return {
+//       orderId,
+//       total,
+//       items: cartItems,
+//       receiptNumber
+//     };
+
+//   } catch (err) {
+//     await connection.rollback();
+//     throw err;
+//   } finally {
+//     connection.release();
+//   }
+// };
 const checkout = async (userId, paymentMethodId = null) => {
   const connection = await db.getConnection();
   try {
@@ -121,7 +218,22 @@ const checkout = async (userId, paymentMethodId = null) => {
         console.error(`Stock insuficiente para producto ${item.product_id}: Disponible ${stock}, solicitado ${item.quantity}`);
         throw new Error(`Stock insuficiente para el producto id ${item.product_id}. Disponible: ${stock}, solicitado: ${item.quantity}`);
       }
+    }
 
+    // Validar método de pago (si se envió)
+    if (paymentMethodId !== null) {
+      const [pmRows] = await connection.query('SELECT id FROM payment_methods WHERE id = ?', [paymentMethodId]);
+      if (pmRows.length === 0) {
+        throw new Error('Método de pago no válido');
+      }
+
+      const [userPmRows] = await connection.query(
+        'SELECT id FROM user_payment_methods WHERE user_id = ? AND payment_method_id = ?',
+        [userId, paymentMethodId]
+      );
+      if (userPmRows.length === 0) {
+        throw new Error('Método de pago no asignado al usuario');
+      }
     }
 
     // Calcular total
@@ -130,9 +242,8 @@ const checkout = async (userId, paymentMethodId = null) => {
     // Crear orden con método de pago si existe
     const [orderResult] = await connection.query(`
       INSERT INTO orders (user_id, total_price, status, payment_method_id)
-VALUES (?, ?, ?, ?)
-
-    `, [userId, total,'pendiente', paymentMethodId]);
+      VALUES (?, ?, ?, ?)
+    `, [userId, total, 'pendiente', paymentMethodId]);
     const orderId = orderResult.insertId;
 
     // Crear order_items
@@ -175,14 +286,12 @@ VALUES (?, ?, ?, ?)
     // Enviar correo
     await emailService.sendOrderConfirmation(user.email, { orderId, total, items: cartItems, receiptNumber });
 
-
     return {
       orderId,
       total,
       items: cartItems,
       receiptNumber
     };
-
   } catch (err) {
     await connection.rollback();
     throw err;
