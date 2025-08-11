@@ -22,7 +22,31 @@ const getOrderHistoryByUserId = async (userId) => {
 
   return orders;
 };
+const getBestSellingProducts = async (limit = 10) => {
+  const [results] = await db.query(`
+    SELECT 
+      p.id,
+      p.name,
+      p.description,
+      p.price,
+      p.discount,
+      p.stock,
+      p.image_url,
+      SUM(oi.quantity) AS total_vendidos
+    FROM products p
+    JOIN order_items oi ON p.id = oi.product_id
+    JOIN orders o ON oi.order_id = o.id
+    WHERE o.status = 'entregado'
+    GROUP BY p.id, p.name, p.description, p.price, p.discount, p.stock, p.image_url
+    ORDER BY total_vendidos DESC
+    LIMIT ?
+  `, [limit]);
+
+  return results;
+};
 
 module.exports = {
   getOrderHistoryByUserId,
+  getBestSellingProducts,
 };
+
